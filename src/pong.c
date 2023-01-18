@@ -7,6 +7,7 @@
 #include "framebuffer.h"
 #include "pong.h"
 #include "pong_field.h"
+#include "semphr.h"
 
 /*-----------------------------------------------------------*/
 
@@ -17,7 +18,7 @@ static void init_gpio(void);
 void handle_trap_button();
 void init_irq();
 
-static uint8_t direction = LEFT;
+static SemaphoreHandle_t framebuffer_mutex;
 /**
  * Defines the pin mapping for button usage.
  * The values match to the FE310. Be careful, the connection pins to the Red-V Board may differ.
@@ -28,13 +29,9 @@ pin_mapping BUTTON[4] = {{GREEN, 18}, {BLUE, 19}, {YELLOW, 20}, {RED, 21}};
 
 
 /* The task functions. */
+void vTaskCore( void *pvParameters );
 void vTaskField( void *pvParameters );
-void vTask2( void *pvParameters );
-void vTask3( void *pvParameters );
-
-const char *pcTextForTask1 = "Task 1\n";
-const char *pcTextForTask2 = "Task 2\n";
-const char *pcTextForTask3 = "Task 3\n";
+void vTaskScore( void *pvParameters );
 
 void delay(uint32_t f_milliseconds) {
     volatile uint64_t *now = (volatile uint64_t*)(CLINT_CTRL_ADDR + CLINT_MTIME);
@@ -50,6 +47,7 @@ static void init_setup(void) {
 	init_irq();
 	oled_init();
 	init_pong();
+	framebuffer_mutex = xSemaphoreCreateMutex();
 	fb_init();
 	delay(2000);
 }
@@ -111,15 +109,29 @@ void init_irq() {
 int main( void )
 {
 	init_setup();
-	xTaskCreate( vTaskField, "Field", 1000, (void*)pcTextForTask1, 2, NULL );
-	xTaskCreate( vTask2, "Task 2", 1000, (void*)pcTextForTask2, 1, NULL );
-	//xTaskCreate( vTask3, "Task 3", 1000, (void*)pcTextForTask3, 1, NULL );
+	xTaskCreate( vTaskCore, "Core", 1000, NULL, 3, NULL);
+	xTaskCreate( vTaskField, "Field", 1000, NULL, 2, NULL );
+	xTaskCreate( vTaskScore, "Score", 1000, NULL, 3, NULL );
 
 	/* start scheduler */
 	vTaskStartScheduler();
 
 	for( ;; );
 	return 0;
+}
+
+/*-----------------------------------------------------------*/
+void vTaskCore( void *pvParameters )
+{
+	TickType_t xLastWakeTime;
+	const TickType_t xDelay = pdMS_TO_TICKS( 10 );
+
+	xLastWakeTime = xTaskGetTickCount();
+
+	for( ;; ) {
+		do_move();
+		vTaskDelayUntil( &xLastWakeTime, xDelay );
+	}
 }
 
 /*-----------------------------------------------------------*/
@@ -131,28 +143,27 @@ void vTaskField( void *pvParameters )
 	xLastWakeTime = xTaskGetTickCount();
 
 	for( ;; ) {
-		// printf("print field!\n");
-
-		do_move();
+		xSemaphoreTake(framebuffer_mutex, portMAX_DELAY);
+		write_field_to_framebuffer();
 		fb_flush();
+		xSemaphoreGive(framebuffer_mutex);
 		vTaskDelayUntil( &xLastWakeTime, xDelay );
 	}
 }
 
 /*-----------------------------------------------------------*/
-void vTask2( void *pvParameters )
+void vTaskScore( void *pvParameters )
 {
-	for( ;; )
-	{
-		printf(pcTextForTask2);
-	}
-}
+	TickType_t xLastWakeTime;
+	const TickType_t xDelay = pdMS_TO_TICKS( 100 );
 
-/*-----------------------------------------------------------*/
-void vTask3( void *pvParameters )
-{
-	for( ;; )
-	{
-		printf(pcTextForTask3);
+	xLastWakeTime = xTaskGetTickCount();
+
+	for( ;; ) {
+		xSemaphoreTake(framebuffer_mutex, portMAX_DELAY);
+		add_score();
+		fb_flush();
+		xSemaphoreGive(framebuffer_mutex);
+		vTaskDelayUntil( &xLastWakeTime, xDelay );
 	}
 }

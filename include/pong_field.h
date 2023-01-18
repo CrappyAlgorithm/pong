@@ -31,7 +31,6 @@ typedef struct {
 
 void init_pong();
 void move_paddle(color_t button);
-void move_paddle_up(Direction direction);
-void move_paddle_down(Direction direction);
-void move_ball();
 void do_move();
+void write_field_to_framebuffer();
+void add_score();

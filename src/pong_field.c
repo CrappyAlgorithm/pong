@@ -1,12 +1,17 @@
 #include "display.h"
 #include "pong_field.h"
+#include "font.h"
 
 static Paddle player_left;
 static Paddle player_right;
 
 static Ball ball;
+static Ball prev_ball;
 
 static void write_paddle_to_framebuffer(Paddle paddle);
+static void write_ball_to_framebuffer();
+static void move_paddle_up(Direction direction);
+static void move_paddle_down(Direction direction);
 
 void init_pong() {
     player_left.column = DISP_H / 2 - PADDLE_PIXEL_RATIO / 2;
@@ -19,6 +24,8 @@ void init_pong() {
     ball.y = DISP_H / 2;
     ball.direction = LEFT;
     ball.angle = NONE;
+    prev_ball.x = ball.x;
+    prev_ball.y = ball.y;
 }
 
 void move_paddle(color_t button) {
@@ -40,7 +47,7 @@ void move_paddle(color_t button) {
     }
 }
 
-void move_paddle_up(Direction direction) {
+static void move_paddle_up(Direction direction) {
     switch (direction) {
     case LEFT:
         if (player_left.column >= MOVE_PIXEL_RATIO) {
@@ -59,7 +66,7 @@ void move_paddle_up(Direction direction) {
     }
 }
 
-void move_paddle_down(Direction direction) {
+static void move_paddle_down(Direction direction) {
     switch (direction) {
     case LEFT:
         player_left.column += MOVE_PIXEL_RATIO;
@@ -76,7 +83,7 @@ void move_paddle_down(Direction direction) {
     }
 }
 
-void move_ball() {
+void do_move() {
     ball.x += ball.direction;
     ball.y += ball.angle;
     if (ball.y == 0 && ball.angle == UP) {
@@ -109,11 +116,16 @@ void move_ball() {
     }
 }
 
-void do_move() {
-    fb_set_pixel(ball.x, ball.y, 0);
-    move_ball();
+void write_field_to_framebuffer() {
     write_paddle_to_framebuffer(player_left);
     write_paddle_to_framebuffer(player_right);
+    write_ball_to_framebuffer();
+}
+
+static void write_ball_to_framebuffer() {
+    fb_set_pixel(prev_ball.x, prev_ball.y, 0);
+    prev_ball.x = ball.x;
+    prev_ball.y = ball.y;
     fb_set_pixel(ball.x, ball.y, 1);
 }
 
@@ -134,3 +146,12 @@ static void write_paddle_to_framebuffer(Paddle paddle) {
     }
 }
 
+void add_score() {
+    printf("Score: P1=%d, P2=%d\n", player_left.score, player_right.score);
+    uint8_t * minor = get_char(player_left.score % 10);
+    uint8_t * major = get_char(player_left.score / 10);
+    for (int i = 0; i < FONT_W; i++) {
+        // framebuffer[i][0] = major++;
+        //framebuffer[i][0] = minor++;
+    }
+}

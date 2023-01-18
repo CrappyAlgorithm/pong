@@ -168,7 +168,7 @@ void vTaskScore( void *pvParameters )
 	for( ;; ) {
 		xSemaphoreTake(framebuffer_mutex, portMAX_DELAY);
 		add_score();
-		//fb_flush();
+		fb_flush();
 		xSemaphoreGive(framebuffer_mutex);
 		vTaskDelayUntil( &xLastWakeTime, xDelay );
 	}

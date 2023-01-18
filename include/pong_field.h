@@ -10,6 +10,11 @@
 #define MOVE_PIXEL_RATIO 8
 
 #define MAX_SCORE 100
+#define GAME_H (DISP_H - 8)
+#define SCORE_ROW (DISP_H / 8) - 1
+#define NUMBER_COUNT 10
+#define NUMBER_W 5
+#define NUMBER_SPACING 2
 
 typedef enum {LEFT = -1, RIGHT = 1} Direction;
 
@@ -17,7 +22,7 @@ typedef enum {NONE = 0, UP = -1, DOWN = 1} Angle;
 
 typedef struct paddle {
     Direction direction;
-    uint32_t column;
+    uint32_t row;
     uint32_t score;
 } Paddle;
 

@@ -148,10 +148,4 @@ static void write_paddle_to_framebuffer(Paddle paddle) {
 
 void add_score() {
     printf("Score: P1=%d, P2=%d\n", player_left.score, player_right.score);
-    uint8_t * minor = get_char(player_left.score % 10);
-    uint8_t * major = get_char(player_left.score / 10);
-    for (int i = 0; i < FONT_W; i++) {
-        // framebuffer[i][0] = major++;
-        //framebuffer[i][0] = minor++;
-    }
 }

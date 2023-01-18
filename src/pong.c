@@ -19,6 +19,9 @@ void handle_trap_button();
 void init_irq();
 
 static SemaphoreHandle_t framebuffer_mutex;
+static SemaphoreHandle_t sem_interrupt;
+static uint32_t interrupt_color;
+
 /**
  * Defines the pin mapping for button usage.
  * The values match to the FE310. Be careful, the connection pins to the Red-V Board may differ.
@@ -32,6 +35,7 @@ pin_mapping BUTTON[4] = {{GREEN, 18}, {BLUE, 19}, {YELLOW, 20}, {RED, 21}};
 void vTaskCore( void *pvParameters );
 void vTaskField( void *pvParameters );
 void vTaskScore( void *pvParameters );
+void vTaskButton( void *pvParameters );
 
 void delay(uint32_t f_milliseconds) {
     volatile uint64_t *now = (volatile uint64_t*)(CLINT_CTRL_ADDR + CLINT_MTIME);
@@ -43,11 +47,13 @@ static void init_setup(void) {
 	/* _init for uart printf */
 	_init();
 	
+	framebuffer_mutex = xSemaphoreCreateMutex();
+	sem_interrupt = xSemaphoreCreateBinary();
+
 	init_gpio();
 	init_irq();
 	oled_init();
 	init_pong();
-	framebuffer_mutex = xSemaphoreCreateMutex();
 	fb_init();
 	delay(2000);
 }
@@ -68,18 +74,17 @@ void init_gpio(void) {
 void handle_trap_button() {
 	// claim interrupt
 	uint32_t nb = REG32(PLIC_BASE + PLIC_CLAIM);
-
 	for (int i = 0; i < COLOR_COUNT; i++) {
 		if (nb == BUTTON[i].pin + 8) {
-			printf("button %d pressed!\n", i);
-			move_paddle(i);
+			interrupt_color = i;
 			// clear gpio pending interrupt
 			REG32(GPIO_BASE + GPIO_RISE_IP) |= (1 << BUTTON[i].pin);
 		}
 	}
-	
 	// complete interrupt
 	REG32(PLIC_BASE + PLIC_CLAIM) = nb;
+	BaseType_t  xHigherPriorityTaskWoken = pdTRUE;
+  	xSemaphoreGiveFromISR(sem_interrupt, &xHigherPriorityTaskWoken);
 }
 
 void init_irq() {
@@ -109,9 +114,10 @@ void init_irq() {
 int main( void )
 {
 	init_setup();
-	xTaskCreate( vTaskCore, "Core", 1000, NULL, 3, NULL);
-	xTaskCreate( vTaskField, "Field", 1000, NULL, 2, NULL );
-	xTaskCreate( vTaskScore, "Score", 1000, NULL, 3, NULL );
+	xTaskCreate( vTaskCore, "Core", 500, NULL, 2, NULL);
+	xTaskCreate( vTaskField, "Field", 500, NULL, 2, NULL);
+	xTaskCreate( vTaskScore, "Score", 500, NULL, 2, NULL);
+	xTaskCreate( vTaskButton, "Button", 500, NULL, 4, NULL);
 
 	/* start scheduler */
 	vTaskStartScheduler();
@@ -162,8 +168,19 @@ void vTaskScore( void *pvParameters )
 	for( ;; ) {
 		xSemaphoreTake(framebuffer_mutex, portMAX_DELAY);
 		add_score();
-		fb_flush();
+		//fb_flush();
 		xSemaphoreGive(framebuffer_mutex);
 		vTaskDelayUntil( &xLastWakeTime, xDelay );
 	}
 }
+
+void vTaskButton( void *pvParameters )
+{
+	for( ;; ) {
+		if (xSemaphoreTake( sem_interrupt, portMAX_DELAY) == pdPASS) {
+			move_paddle(interrupt_color);
+		}
+	}
+}
+
+

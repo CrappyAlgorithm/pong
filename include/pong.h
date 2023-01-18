@@ -23,6 +23,7 @@
 #define PLIC_CLAIM  0x200004
 
 #define COLOR_COUNT 4
+#define FB_MAX_DELAY 1000
 
 typedef enum {GREEN, BLUE, YELLOW, RED} color_t;
 

@@ -1,4 +1,3 @@
-/* FreeRTOS.org includes. */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "startup.h"
@@ -114,7 +113,7 @@ void init_irq() {
 int main( void )
 {
 	init_setup();
-	xTaskCreate( vTaskCore, "Core", 500, NULL, 2, NULL);
+	xTaskCreate( vTaskCore, "Core", 500, NULL, 3, NULL);
 	xTaskCreate( vTaskField, "Field", 500, NULL, 2, NULL);
 	xTaskCreate( vTaskScore, "Score", 500, NULL, 2, NULL);
 	xTaskCreate( vTaskButton, "Button", 500, NULL, 4, NULL);

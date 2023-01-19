@@ -6,11 +6,11 @@
 #include <stdint.h>
 
 /** Display width in pixels */
-#define DISP_W 128
+#define DISP_W 128u
 #define DISP_MEM_W 132
 #define DISP_W_OFFS ((DISP_MEM_W-DISP_W)/2)
 /** Display height in pixels */
-#define DISP_H 64
+#define DISP_H 64u
 
 #define OLED_CS	   15
 #define OLED_CS_OFS 2	//Chip select offset -  0 = pin 10(2), 1 = ?, 2 = 15(9), 3 = 16(10)

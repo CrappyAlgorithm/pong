@@ -14,8 +14,9 @@
 static void init_setup(void);
 static void init_gpio(void);
 
-void handle_trap_button();
-void init_irq();
+void handle_trap_button(void);
+void init_irq(void);
+void delay(uint32_t f_milliseconds);
 
 static SemaphoreHandle_t framebuffer_mutex;
 static SemaphoreHandle_t sem_interrupt;
@@ -31,20 +32,20 @@ pin_mapping BUTTON[4] = {{GREEN, 18}, {BLUE, 19}, {YELLOW, 20}, {RED, 21}};
 
 
 /* The task functions. */
-void vTaskCore( void *pvParameters );
-void vTaskField( void *pvParameters );
-void vTaskScore( void *pvParameters );
-void vTaskButton( void *pvParameters );
+void vTaskCore( void * pvParameters );
+void vTaskField( void * pvParameters );
+void vTaskScore( void * pvParameters );
+void vTaskButton( void * pvParameters );
 
 void delay(uint32_t f_milliseconds) {
-    volatile uint64_t *now = (volatile uint64_t*)(CLINT_CTRL_ADDR + CLINT_MTIME);
+    volatile const uint64_t *now = (volatile uint64_t*)(CLINT_CTRL_ADDR + CLINT_MTIME);
     volatile uint64_t then = *now + f_milliseconds*(RTC_FREQ / 2000);
     while (*now < then);
 }
 
 static void init_setup(void) {
 	/* _init for uart printf */
-	_init();
+	//_init();
 	
 	framebuffer_mutex = xSemaphoreCreateMutex();
 	sem_interrupt = xSemaphoreCreateBinary();
@@ -61,50 +62,50 @@ void init_gpio(void) {
 	
     for (uint32_t i = 0; i < COLOR_COUNT; i++) {
         // init button
-        REG32(GPIO_BASE + GPIO_IOF_EN) &= ~(1 << BUTTON[i].pin);
-        REG32(GPIO_BASE + GPIO_PULLUP_EN) |= 1 << BUTTON[i].pin;
-	    REG32(GPIO_BASE + GPIO_INPUT_EN) |= 1 << BUTTON[i].pin;
-	    REG32(GPIO_BASE + GPIO_OUTPUT_EN) &= ~(1 << BUTTON[i].pin);
-	    REG32(GPIO_BASE + GPIO_OUTPUT_VAL) &= ~(1 << BUTTON[i].pin);
+        REG32(GPIO_BASE + GPIO_IOF_EN) &= ~(1u << BUTTON[i].pin);
+        REG32(GPIO_BASE + GPIO_PULLUP_EN) |= 1u << BUTTON[i].pin;
+	    REG32(GPIO_BASE + GPIO_INPUT_EN) |= 1u << BUTTON[i].pin;
+	    REG32(GPIO_BASE + GPIO_OUTPUT_EN) &= ~(1u << BUTTON[i].pin);
+	    REG32(GPIO_BASE + GPIO_OUTPUT_VAL) &= ~(1u << BUTTON[i].pin);
     }
 	
 }
 
-void handle_trap_button() {
+void handle_trap_button(void) {
 	// claim interrupt
 	uint32_t nb = REG32(PLIC_BASE + PLIC_CLAIM);
-	for (int i = 0; i < COLOR_COUNT; i++) {
-		if (nb == BUTTON[i].pin + 8) {
+	for (uint16_t i = 0; i < COLOR_COUNT; i++) {
+		if (nb == (BUTTON[i].pin + 8u)) {
 			interrupt_color = i;
 			// clear gpio pending interrupt
-			REG32(GPIO_BASE + GPIO_RISE_IP) |= (1 << BUTTON[i].pin);
+			REG32(GPIO_BASE + GPIO_RISE_IP) |= (1u << BUTTON[i].pin);
 		}
 	}
 	// complete interrupt
 	REG32(PLIC_BASE + PLIC_CLAIM) = nb;
 	BaseType_t  xHigherPriorityTaskWoken = pdTRUE;
-  	xSemaphoreGiveFromISR(sem_interrupt, &xHigherPriorityTaskWoken);
+  	if (xSemaphoreGiveFromISR(sem_interrupt, &xHigherPriorityTaskWoken) != pdPASS) {}
 }
 
-void init_irq() {
+void init_irq(void) {
 	// PLIC, 52 sources, 7 priorities, all off
 	REG32(PLIC_BASE + PLIC_ENABLE) = 0;
 	REG32(PLIC_BASE + PLIC_ENABLE + 4) = 0;
 	REG32(PLIC_BASE + PLIC_THRESH) = 0;
 
-	for (int i = 0; i < COLOR_COUNT; i++) {
+	for (uint16_t i = 0; i < COLOR_COUNT; i++) {
 		// enable irq for button and set priority for button to 1
 		// interrupts for gpio start at 8
-		REG32(PLIC_BASE + PLIC_ENABLE) |= (1 << (8 + BUTTON[i].pin));
-		REG32(PLIC_BASE + 4 * (8 + BUTTON[i].pin)) = 1;
+		REG32(PLIC_BASE + PLIC_ENABLE) |= (1u << (8u + BUTTON[i].pin));
+		REG32(PLIC_BASE + 4u * (8u + BUTTON[i].pin)) = 1u;
 
 		// set handler will be handled by FreeRTOS
 
 		// irq at rising
-		REG32(GPIO_BASE + GPIO_RISE_IE) |= (1 << BUTTON[i].pin);
+		REG32(GPIO_BASE + GPIO_RISE_IE) |= (1u << BUTTON[i].pin);
 
 		// clear gpio pending interrupt
-		REG32(GPIO_BASE + GPIO_RISE_IP) |= (1 << BUTTON[i].pin);
+		REG32(GPIO_BASE + GPIO_RISE_IP) |= (1u << BUTTON[i].pin);
 	}
 	// set mie and mstatus will be handled by FreeRTOS
 }
@@ -112,11 +113,24 @@ void init_irq() {
 /*-----------------------------------------------------------*/
 int main( void )
 {
+	uint8_t error_task_creation = 0;
 	init_setup();
-	xTaskCreate( vTaskCore, "Core", 500, NULL, 3, NULL);
-	xTaskCreate( vTaskField, "Field", 500, NULL, 2, NULL);
-	xTaskCreate( vTaskScore, "Score", 500, NULL, 2, NULL);
-	xTaskCreate( vTaskButton, "Button", 500, NULL, 4, NULL);
+	if (xTaskCreate( vTaskCore, "Core", 500, NULL, 3, NULL) != pdPASS) {
+		error_task_creation = 1;
+	}
+	if (xTaskCreate( vTaskField, "Field", 500, NULL, 2, NULL) != pdPASS) {
+		error_task_creation = 1;
+	}
+	if (xTaskCreate( vTaskScore, "Score", 500, NULL, 2, NULL) != pdPASS) {
+		error_task_creation = 1;
+	}
+	if (xTaskCreate( vTaskButton, "Button", 500, NULL, 4, NULL) != pdPASS) {
+		error_task_creation = 1;
+	}
+
+	if (error_task_creation == 1u) {
+		return 1;
+	}
 
 	/* start scheduler */
 	vTaskStartScheduler();
@@ -126,7 +140,7 @@ int main( void )
 }
 
 /*-----------------------------------------------------------*/
-void vTaskCore( void *pvParameters )
+void vTaskCore( void * pvParameters )
 {
 	TickType_t xLastWakeTime;
 	const TickType_t xDelay = pdMS_TO_TICKS( 10 );
@@ -140,7 +154,7 @@ void vTaskCore( void *pvParameters )
 }
 
 /*-----------------------------------------------------------*/
-void vTaskField( void *pvParameters )
+void vTaskField( void * pvParameters )
 {
 	TickType_t xLastWakeTime;
 	const TickType_t xDelay = pdMS_TO_TICKS( 10 );
@@ -148,16 +162,17 @@ void vTaskField( void *pvParameters )
 	xLastWakeTime = xTaskGetTickCount();
 
 	for( ;; ) {
-		xSemaphoreTake(framebuffer_mutex, portMAX_DELAY);
-		write_field_to_framebuffer();
-		fb_flush();
-		xSemaphoreGive(framebuffer_mutex);
+		if (xSemaphoreTake(framebuffer_mutex, portMAX_DELAY) == pdTRUE) {
+			write_field_to_framebuffer();
+			fb_flush();
+			if (xSemaphoreGive(framebuffer_mutex) == pdFALSE) {}
+		}
 		vTaskDelayUntil( &xLastWakeTime, xDelay );
 	}
 }
 
 /*-----------------------------------------------------------*/
-void vTaskScore( void *pvParameters )
+void vTaskScore( void * pvParameters )
 {
 	TickType_t xLastWakeTime;
 	const TickType_t xDelay = pdMS_TO_TICKS( 100 );
@@ -165,15 +180,16 @@ void vTaskScore( void *pvParameters )
 	xLastWakeTime = xTaskGetTickCount();
 
 	for( ;; ) {
-		xSemaphoreTake(framebuffer_mutex, portMAX_DELAY);
-		add_score();
-		fb_flush();
-		xSemaphoreGive(framebuffer_mutex);
+		if (xSemaphoreTake(framebuffer_mutex, portMAX_DELAY) == pdTRUE) {
+			add_score();
+			fb_flush();
+			if (xSemaphoreGive(framebuffer_mutex) == pdFALSE) {}
+		}
 		vTaskDelayUntil( &xLastWakeTime, xDelay );
 	}
 }
 
-void vTaskButton( void *pvParameters )
+void vTaskButton( void * pvParameters )
 {
 	for( ;; ) {
 		if (xSemaphoreTake( sem_interrupt, portMAX_DELAY) == pdPASS) {

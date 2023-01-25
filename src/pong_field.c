@@ -13,14 +13,14 @@ static void move_paddle_up(Direction direction);
 static void move_paddle_down(Direction direction);
 
 void init_pong(void) {
-    player_left.row = (uint32_t)((GAME_H / 2u) - (PADDLE_PIXEL_RATIO / 2u));
+    player_left.row = (uint16_t) ((GAME_H / 2u) - (PADDLE_PIXEL_RATIO / 2u));
     player_left.direction = LEFT;
     player_left.score = 0u;
-    player_right.row = (uint32_t)((GAME_H / 2u) - (PADDLE_PIXEL_RATIO / 2u)); 
+    player_right.row = (uint16_t) ((GAME_H / 2u) - (PADDLE_PIXEL_RATIO / 2u)); 
     player_right.direction = RIGHT;
     player_right.score = 0u;
-    ball.x = (uint32_t)(DISP_W / 2u);
-    ball.y = (uint32_t)(GAME_H / 2u);
+    ball.x = (uint16_t)(DISP_W / 2u);
+    ball.y = (uint16_t) (GAME_H / 2u);
     ball.direction = LEFT;
     ball.angle = NONE;
     prev_ball.x = ball.x;
@@ -73,13 +73,13 @@ static void move_paddle_down(Direction direction) {
     case LEFT:
         player_left.row += MOVE_PIXEL_RATIO;
         if ((player_left.row + PADDLE_PIXEL_RATIO) > (GAME_H - 1u)) {
-            player_left.row = (uint32_t)(GAME_H - 1u - PADDLE_PIXEL_RATIO);
+            player_left.row = (uint16_t) (GAME_H - 1u - PADDLE_PIXEL_RATIO);
         }
         break;
     case RIGHT:
         player_right.row += MOVE_PIXEL_RATIO;
         if ((player_right.row + PADDLE_PIXEL_RATIO) > (GAME_H - 1u)) {
-            player_right.row = (uint32_t)(GAME_H - 1u - PADDLE_PIXEL_RATIO);
+            player_right.row = (uint16_t) (GAME_H - 1u - PADDLE_PIXEL_RATIO);
         }
         break;
     default:

@@ -22,13 +22,13 @@ typedef enum {NONE = 0, UP = -1, DOWN = 1} Angle;
 
 typedef struct {
     Direction direction;
-    uint32_t row;
-    uint32_t score;
+    uint16_t row;
+    uint16_t score;
 } Paddle;
 
 typedef struct {
-    uint32_t x;
-    uint32_t y;
+    uint16_t x;
+    uint16_t y;
     Direction direction;
     Angle angle;
 } Ball;

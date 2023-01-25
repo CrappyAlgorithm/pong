@@ -18,6 +18,7 @@ static void init_irq(void);
 static void delay(uint64_t f_milliseconds);
 
 static SemaphoreHandle_t framebuffer_mutex;
+static SemaphoreHandle_t paddle_mutex;
 static SemaphoreHandle_t sem_interrupt;
 static uint64_t interrupt_color;
 
@@ -47,10 +48,8 @@ static void delay(uint64_t f_milliseconds) {
 }
 
 static void init_setup(void) {
-	/* _init for uart printf */
-	//_init();
-	
 	framebuffer_mutex = xSemaphoreCreateMutex();
+	paddle_mutex = xSemaphoreCreateMutex();
 	sem_interrupt = xSemaphoreCreateBinary();
 
 	init_gpio();
@@ -165,11 +164,14 @@ static void vTaskField( void * pvParameters )
 	xLastWakeTime = xTaskGetTickCount();
 
 	for( ;; ) {
-		if (xSemaphoreTake(framebuffer_mutex, portMAX_DELAY) == pdTRUE) {
-			write_field_to_framebuffer();
-			fb_flush();
-			if (xSemaphoreGive(framebuffer_mutex) == pdFALSE) {}
-		}
+		if (xSemaphoreTake(paddle_mutex, portMAX_DELAY) == pdTRUE) {
+			if (xSemaphoreTake(framebuffer_mutex, portMAX_DELAY) == pdTRUE) {
+				write_field_to_framebuffer();
+				fb_flush();
+				if (xSemaphoreGive(framebuffer_mutex) == pdFALSE) {}
+			}
+			if (xSemaphoreGive(paddle_mutex) == pdFALSE) {}
+		}		
 		vTaskDelayUntil( &xLastWakeTime, xDelay );
 	}
 }
@@ -196,7 +198,10 @@ static void vTaskButton( void * pvParameters )
 {
 	for( ;; ) {
 		if (xSemaphoreTake( sem_interrupt, portMAX_DELAY) == pdPASS) {
-			move_paddle(interrupt_color);
+			if (xSemaphoreTake(paddle_mutex, portMAX_DELAY) == pdTRUE) {
+				move_paddle(interrupt_color);
+				if (xSemaphoreGive(paddle_mutex) == pdFALSE) {}
+			}
 		}
 	}
 }

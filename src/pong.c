@@ -21,6 +21,11 @@ static SemaphoreHandle_t framebuffer_mutex;
 static SemaphoreHandle_t sem_interrupt;
 static uint64_t interrupt_color;
 
+typedef struct {
+    color_t color;
+    uint32_t pin;
+} pin_mapping;
+
 /**
  * Defines the pin mapping for button usage.
  * The values match to the FE310. Be careful, the connection pins to the Red-V Board may differ.
@@ -53,7 +58,7 @@ static void init_setup(void) {
 	oled_init();
 	init_pong();
 	fb_init();
-	delay(2000);
+	delay(INIT_DELAY);
 }
 
 static void init_gpio(void) {
@@ -103,7 +108,7 @@ static void init_irq(void) {
 		REG32(GPIO_BASE + GPIO_RISE_IE) |= (1u << BUTTON[i].pin);
 
 		// clear gpio pending interrupt
-		REG32(GPIO_BASE + GPIO_RISE_IP) |= (1u << BUTTON[i].pin);
+		REG32((uint32_t)GPIO_BASE + GPIO_RISE_IP) |= (1u << BUTTON[i].pin);
 	}
 	// set mie and mstatus will be handled by FreeRTOS
 }

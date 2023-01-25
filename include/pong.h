@@ -13,13 +13,6 @@
 #define PLIC_CLAIM  0x200004
 
 #define COLOR_COUNT 4u
-#define FB_MAX_DELAY 1000u
-
-typedef enum {GREEN, BLUE, YELLOW, RED} color_t;
-
-typedef struct {
-    color_t color;
-    uint32_t pin;
-} pin_mapping;
+#define INIT_DELAY 2000u
 
 void handle_trap_button(void);

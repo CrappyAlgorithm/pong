@@ -10,29 +10,13 @@
 #define MOVE_PIXEL_RATIO 8u
 
 #define MAX_SCORE 100u
-#define GAME_H (DISP_H - 8u)
+#define GAME_H ((uint32_t)DISP_H - 8u)
 #define SCORE_ROW (DISP_H / 8u) - 1u
 #define NUMBER_COUNT 10u
 #define NUMBER_W 5u
 #define NUMBER_SPACING 2u
 
-typedef enum {LEFT = -1, RIGHT = 1} Direction;
-
-typedef enum {NONE = 0, UP = -1, DOWN = 1} Angle;
-
-typedef struct {
-    Direction direction;
-    uint16_t row;
-    uint16_t score;
-} Paddle;
-
-typedef struct {
-    uint16_t x;
-    uint16_t y;
-    Direction direction;
-    Angle angle;
-} Ball;
-
+typedef enum {GREEN, BLUE, YELLOW, RED} color_t;
 
 void init_pong( void );
 void move_paddle(color_t button);

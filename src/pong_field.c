@@ -1,6 +1,23 @@
 #include "display.h"
 #include "pong_field.h"
 
+typedef enum {LEFT = -1, RIGHT = 1} Direction;
+
+typedef enum {NONE = 0, UP = -1, DOWN = 1} Angle;
+
+typedef struct {
+    Direction direction;
+    uint32_t row;
+    uint32_t score;
+} Paddle;
+
+typedef struct {
+    uint32_t x;
+    uint32_t y;
+    Direction direction;
+    Angle angle;
+} Ball;
+
 static Paddle player_left;
 static Paddle player_right;
 
@@ -13,14 +30,14 @@ static void move_paddle_up(Direction direction);
 static void move_paddle_down(Direction direction);
 
 void init_pong(void) {
-    player_left.row = (uint16_t) ((GAME_H / 2u) - (PADDLE_PIXEL_RATIO / 2u));
+    player_left.row = (((uint32_t)GAME_H / 2u) - ((uint32_t)PADDLE_PIXEL_RATIO / 2u));
     player_left.direction = LEFT;
     player_left.score = 0u;
-    player_right.row = (uint16_t) ((GAME_H / 2u) - (PADDLE_PIXEL_RATIO / 2u)); 
+    player_right.row = ((GAME_H / 2u) - ((uint32_t)PADDLE_PIXEL_RATIO / 2u)); 
     player_right.direction = RIGHT;
     player_right.score = 0u;
-    ball.x = (uint16_t)(DISP_W / 2u);
-    ball.y = (uint16_t) (GAME_H / 2u);
+    ball.x = ((uint32_t)DISP_W / 2u);
+    ball.y = (GAME_H / 2u);
     ball.direction = LEFT;
     ball.angle = NONE;
     prev_ball.x = ball.x;
@@ -73,13 +90,13 @@ static void move_paddle_down(Direction direction) {
     case LEFT:
         player_left.row += MOVE_PIXEL_RATIO;
         if ((player_left.row + PADDLE_PIXEL_RATIO) > (GAME_H - 1u)) {
-            player_left.row = (uint16_t) (GAME_H - 1u - PADDLE_PIXEL_RATIO);
+            player_left.row = (GAME_H - 1u - PADDLE_PIXEL_RATIO);
         }
         break;
     case RIGHT:
         player_right.row += MOVE_PIXEL_RATIO;
         if ((player_right.row + PADDLE_PIXEL_RATIO) > (GAME_H - 1u)) {
-            player_right.row = (uint16_t) (GAME_H - 1u - PADDLE_PIXEL_RATIO);
+            player_right.row = (GAME_H - 1u - PADDLE_PIXEL_RATIO);
         }
         break;
     default:
@@ -157,10 +174,10 @@ static void write_paddle_to_framebuffer(Paddle paddle) {
     }
     uint8_t column_min = paddle.row;
     uint8_t column_max = paddle.row + PADDLE_PIXEL_RATIO;
-    for (int i = 0; i < (int) GAME_H; i++) {
+    for (uint32_t i = 0; i < GAME_H; i++) {
         fb_set_pixel(row, i, 0u);
     }
-    for (int i = (int) column_min; i < (int) column_max; i++) {
+    for (uint32_t i = column_min; i < column_max; i++) {
         fb_set_pixel(row, i, 1u);
     }
 }

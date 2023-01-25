@@ -107,7 +107,7 @@ static void init_irq(void) {
 		REG32(GPIO_BASE + GPIO_RISE_IE) |= (1u << BUTTON[i].pin);
 
 		// clear gpio pending interrupt
-		REG32((uint32_t)GPIO_BASE + GPIO_RISE_IP) |= (1u << BUTTON[i].pin);
+		REG32(GPIO_BASE + GPIO_RISE_IP) |= (1u << BUTTON[i].pin);
 	}
 	// set mie and mstatus will be handled by FreeRTOS
 }

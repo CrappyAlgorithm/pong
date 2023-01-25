@@ -3,6 +3,7 @@
 #include "inttypes.h"
 
 #define REG32(P) (*(volatile uint32_t *) (P))
+#define REG64(P) (*(volatile uint64_t *) (P))
 
 #define GPIO_BASE 0x10012000
 
@@ -21,4 +22,4 @@ typedef struct {
     uint32_t pin;
 } pin_mapping;
 
-
+void handle_trap_button(void);

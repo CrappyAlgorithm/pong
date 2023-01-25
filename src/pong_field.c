@@ -186,10 +186,10 @@ void add_score(void) {
     for (int i = 0; i < (int) DISP_W; i++) {
         framebuffer[i][SCORE_ROW] = 0x0u;
     }
-    for (int i = 0; i < (int) NUMBER_W; i++) {
+    for (uint32_t i = 0; i < NUMBER_W; i++) {
         framebuffer[i][SCORE_ROW] = numbers[left_major][i];
-        framebuffer[i + (int)(NUMBER_W + NUMBER_SPACING)][SCORE_ROW] = numbers[left_minor][i];
-        framebuffer[(int)(DISP_W - 1u - NUMBER_W) + i][SCORE_ROW] = numbers[right_minor][i];
-        framebuffer[(int)(DISP_W - 1u - (2u * NUMBER_W) - NUMBER_SPACING) + i][SCORE_ROW] = numbers[right_major][i];
+        framebuffer[i + ((uint32_t)NUMBER_W + NUMBER_SPACING)][SCORE_ROW] = numbers[left_minor][i];
+        framebuffer[i + ((uint32_t)DISP_W - 1u - NUMBER_W)][SCORE_ROW] = numbers[right_minor][i];
+        framebuffer[i + ((uint32_t)DISP_W - 1u - ((uint32_t)2u * NUMBER_W) - NUMBER_SPACING)][SCORE_ROW] = numbers[right_major][i];
     }
 }

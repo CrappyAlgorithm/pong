@@ -14,13 +14,12 @@
 static void init_setup(void);
 static void init_gpio(void);
 
-void handle_trap_button(void);
-void init_irq(void);
-void delay(uint32_t f_milliseconds);
+static void init_irq(void);
+static void delay(uint64_t f_milliseconds);
 
 static SemaphoreHandle_t framebuffer_mutex;
 static SemaphoreHandle_t sem_interrupt;
-static uint32_t interrupt_color;
+static uint64_t interrupt_color;
 
 /**
  * Defines the pin mapping for button usage.
@@ -28,19 +27,18 @@ static uint32_t interrupt_color;
  * Red-V-Pins: GREEN = 2, BLUE = 3, YELLOW = 4, RED = 5
  * 
  */
-pin_mapping BUTTON[4] = {{GREEN, 18}, {BLUE, 19}, {YELLOW, 20}, {RED, 21}};
+static pin_mapping BUTTON[4] = {{GREEN, 18}, {BLUE, 19}, {YELLOW, 20}, {RED, 21}};
 
 
 /* The task functions. */
-void vTaskCore( void * pvParameters );
-void vTaskField( void * pvParameters );
-void vTaskScore( void * pvParameters );
-void vTaskButton( void * pvParameters );
+static void vTaskCore( void * pvParameters );
+static void vTaskField( void * pvParameters );
+static void vTaskScore( void * pvParameters );
+static void vTaskButton( void * pvParameters );
 
-void delay(uint32_t f_milliseconds) {
-    volatile const uint64_t *now = (volatile uint64_t*)(CLINT_CTRL_ADDR + CLINT_MTIME);
-    volatile uint64_t then = *now + f_milliseconds*(RTC_FREQ / 2000);
-    while (*now < then);
+static void delay(uint64_t f_milliseconds) {
+	volatile uint64_t then = REG64(CLINT_CTRL_ADDR + (uint16_t)CLINT_MTIME) + (f_milliseconds * ((uint64_t)RTC_FREQ / 1000ULL));
+	while (REG64(CLINT_CTRL_ADDR + (uint16_t)CLINT_MTIME) < then) {};
 }
 
 static void init_setup(void) {
@@ -58,7 +56,7 @@ static void init_setup(void) {
 	delay(2000);
 }
 
-void init_gpio(void) {
+static void init_gpio(void) {
 	
     for (uint32_t i = 0; i < COLOR_COUNT; i++) {
         // init button
@@ -87,7 +85,7 @@ void handle_trap_button(void) {
   	if (xSemaphoreGiveFromISR(sem_interrupt, &xHigherPriorityTaskWoken) != pdPASS) {}
 }
 
-void init_irq(void) {
+static void init_irq(void) {
 	// PLIC, 52 sources, 7 priorities, all off
 	REG32(PLIC_BASE + PLIC_ENABLE) = 0;
 	REG32(PLIC_BASE + PLIC_ENABLE + 4) = 0;
@@ -97,7 +95,7 @@ void init_irq(void) {
 		// enable irq for button and set priority for button to 1
 		// interrupts for gpio start at 8
 		REG32(PLIC_BASE + PLIC_ENABLE) |= (1u << (8u + BUTTON[i].pin));
-		REG32(PLIC_BASE + 4u * (8u + BUTTON[i].pin)) = 1u;
+		REG32((uint32_t)PLIC_BASE + 4u * (8u + BUTTON[i].pin)) = 1u;
 
 		// set handler will be handled by FreeRTOS
 
@@ -135,12 +133,12 @@ int main( void )
 	/* start scheduler */
 	vTaskStartScheduler();
 
-	for( ;; );
+	for( ;; ) {};
 	return 0;
 }
 
 /*-----------------------------------------------------------*/
-void vTaskCore( void * pvParameters )
+static void vTaskCore( void * pvParameters )
 {
 	TickType_t xLastWakeTime;
 	const TickType_t xDelay = pdMS_TO_TICKS( 10 );
@@ -154,7 +152,7 @@ void vTaskCore( void * pvParameters )
 }
 
 /*-----------------------------------------------------------*/
-void vTaskField( void * pvParameters )
+static void vTaskField( void * pvParameters )
 {
 	TickType_t xLastWakeTime;
 	const TickType_t xDelay = pdMS_TO_TICKS( 10 );
@@ -172,7 +170,7 @@ void vTaskField( void * pvParameters )
 }
 
 /*-----------------------------------------------------------*/
-void vTaskScore( void * pvParameters )
+static void vTaskScore( void * pvParameters )
 {
 	TickType_t xLastWakeTime;
 	const TickType_t xDelay = pdMS_TO_TICKS( 100 );
@@ -189,7 +187,7 @@ void vTaskScore( void * pvParameters )
 	}
 }
 
-void vTaskButton( void * pvParameters )
+static void vTaskButton( void * pvParameters )
 {
 	for( ;; ) {
 		if (xSemaphoreTake( sem_interrupt, portMAX_DELAY) == pdPASS) {
